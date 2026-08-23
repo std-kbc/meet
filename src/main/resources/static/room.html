@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - 채팅방</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header>
+    <h1><a href="/index.html" class="brand-link">Chat</a></h1>
+    <div class="actions">
+        <span class="user-info" id="userInfo"></span>
+        <button class="btn-outline btn-sm" onclick="location.href='/index.html'">목록</button>
+        <button class="btn-danger btn-sm" id="logoutBtn">로그아웃</button>
+    </div>
+</header>
+
+<div id="errorBanner" class="error-banner"></div>
+
+<main class="page page-room">
+    <div class="chat-panel chat-panel-full" id="chatView">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <h2 id="chatRoomName">불러오는 중...</h2>
+                <p id="chatRoomMeta">-</p>
+                <p class="participants" id="chatParticipants"></p>
+                <p class="connection-status">
+                    <span class="status-dot status-disconnected" id="connectionDot"></span>
+                    <span id="connectionLabel">연결 안 됨</span>
+                </p>
+            </div>
+            <div class="chat-header-actions">
+                <button class="btn-outline btn-sm" id="backBtn">← 목록</button>
+                <button class="btn-outline btn-sm" id="leaveRoomBtn">나가기</button>
+            </div>
+        </div>
+        <div class="messages" id="messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="messageInput" placeholder="메시지를 입력하세요" disabled>
+            <button class="btn-primary" id="sendBtn" disabled>전송</button>
+        </div>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/ws-client.js"></script>
+<script src="/js/room.js"></script>
+</body>
+</html>

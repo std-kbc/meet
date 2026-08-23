@@ -1,0 +1,29 @@
+# docker compose up -d
+version: '3'
+services:
+  mariadb:
+    image: mariadb:10
+    ports:
+      - "33306:3306"
+    container_name: mariadb
+    volumes:
+      - ./db/conf.d:/etc/mysql/conf.d
+      - ./db/data:/var/lib/mysql
+      - ./db/initdb.d:/docker-entrypoint-initdb.d
+    environment:
+      TZ: Asia/Seoul
+      MARIADB_USER: maria
+      MARIADB_PASSWORD: application
+      MARIADB_ROOT_PASSWORD: application
+      MARIADB_DATABASE: DEMO
+  redis:
+    image: redis:7.4.3
+    ports:
+      - "36379:6379"
+    volumes:
+      - ./data/redis/:/data
+    command: ["redis-server", "--requirepass", "redis"]
+
+networks:
+  default:
+    driver: bridge

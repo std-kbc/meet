@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.std.chat.message.mapper.ChatMessageMapper">
+
+	<resultMap id="chatMessageResultMap" type="com.std.chat.message.domain.ChatMessage">
+		<id property="id" column="id"/>
+		<result property="chatRoomId" column="chat_room_id"/>
+		<result property="senderId" column="sender_id"/>
+		<result property="senderNickname" column="sender_nickname"/>
+		<result property="messageType" column="message_type"/>
+		<result property="message" column="message"/>
+		<result property="parentMessageId" column="parent_message_id"/>
+		<result property="fileGroupId" column="file_group_id"/>
+		<result property="status" column="status"/>
+		<result property="editedAt" column="edited_at"/>
+		<result property="sentAt" column="sent_at"/>
+		<result property="deletedAt" column="deleted_at"/>
+		<result property="createdAt" column="created_at"/>
+		<result property="updatedAt" column="updated_at"/>
+	</resultMap>
+
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO chat_message (chat_room_id, sender_id, message_type, message, status, sent_at)
+		VALUES (#{chatRoomId}, #{senderId}, #{messageType}, #{message}, #{status}, #{sentAt})
+	</insert>
+
+	<select id="findById" resultMap="chatMessageResultMap">
+		SELECT cm.id, cm.chat_room_id, cm.sender_id, u.nickname AS sender_nickname,
+		       cm.message_type, cm.message, cm.parent_message_id, cm.file_group_id,
+		       cm.status, cm.edited_at, cm.sent_at, cm.deleted_at, cm.created_at, cm.updated_at
+		FROM chat_message cm
+		INNER JOIN users u ON cm.sender_id = u.id
+		WHERE cm.id = #{id}
+		  AND cm.deleted_at IS NULL
+		  AND cm.status = 'NORMAL'
+	</select>
+
+	<select id="findByRoomId" resultMap="chatMessageResultMap">
+		SELECT cm.id, cm.chat_room_id, cm.sender_id, u.nickname AS sender_nickname,
+		       cm.message_type, cm.message, cm.parent_message_id, cm.file_group_id,
+		       cm.status, cm.edited_at, cm.sent_at, cm.deleted_at, cm.created_at, cm.updated_at
+		FROM chat_message cm
+		INNER JOIN users u ON cm.sender_id = u.id
+		WHERE cm.chat_room_id = #{chatRoomId}
+		  AND cm.deleted_at IS NULL
+		  AND cm.status = 'NORMAL'
+		<if test="cursor != null">
+			AND id &lt; #{cursor}
+		</if>
+		ORDER BY id DESC
+		LIMIT #{size}
+	</select>
+
+	<select id="findLastMessagesByRoomIds" resultMap="chatMessageResultMap">
+		SELECT cm.id, cm.chat_room_id, cm.sender_id, cm.message_type, cm.message,
+		       cm.status, cm.sent_at
+		FROM chat_message cm
+		INNER JOIN (
+			SELECT chat_room_id, MAX(id) AS max_id
+			FROM chat_message
+			WHERE deleted_at IS NULL
+			  AND status = 'NORMAL'
+			  AND chat_room_id IN
+			<foreach collection="roomIds" item="roomId" open="(" separator="," close=")">
+				#{roomId}
+			</foreach>
+			GROUP BY chat_room_id
+		) latest ON cm.id = latest.max_id
+	</select>
+
+</mapper>

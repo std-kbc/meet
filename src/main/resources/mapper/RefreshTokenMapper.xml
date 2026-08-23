@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.std.chat.auth.mapper.RefreshTokenMapper">
+
+	<insert id="upsert">
+		INSERT INTO refresh_tokens (user_id, token, expires_at)
+		VALUES (#{userId}, #{token}, #{expiresAt})
+		ON DUPLICATE KEY UPDATE
+			token = #{token},
+			expires_at = #{expiresAt}
+	</insert>
+
+	<select id="findByUserId" resultType="string">
+		SELECT token
+		FROM refresh_tokens
+		WHERE user_id = #{userId}
+		  AND expires_at > CURRENT_TIMESTAMP
+	</select>
+
+	<delete id="deleteByUserId">
+		DELETE FROM refresh_tokens
+		WHERE user_id = #{userId}
+	</delete>
+
+</mapper>
