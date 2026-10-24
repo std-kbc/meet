@@ -36,4 +36,4 @@ build/
 .vscode/
 docs
 data
-db
+# db

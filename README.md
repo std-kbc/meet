@@ -129,6 +129,9 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - **Rotation:** 갱신할 때마다 새 토큰으로 덮어써서, 한 번 쓴 토큰은 재사용할 수 없다.
 
 ---
+### 개발 환경 세팅 방법
+
+
 ---
 
 ## TODO: WebRTC 영상통화 기능 추가 (진행 중)
