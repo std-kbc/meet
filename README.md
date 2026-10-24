@@ -54,8 +54,13 @@ REST API(방 관리, 메시지 조회)와 WebSocket(실시간 메시지 전송)�
 
 ## 실행 방법
 ```bash
-docker compose up -d
+docker compose up -d # mariadb, redis 실행
+
+mvn wrapper:wrapper  # maven 설치 및 설정하기
+
+mvnw spring-boot:run # maven-wrapper를 통해 프로젝트 실행
 ```
+- mvnw는 maven-wrapper로 maven이 설치 되지 않은 환경에서, 프로젝트 작성시 사용된 maven과 동일한 버전을 다운로드하고 동일한 상태로 설정해주는 스크립트 모음이다. 이를 사용하면, 서로 다른 개발 환경에서 동일한 maven 버전과 설정으로 프로젝트를 실행할 수있어 프로젝트 정상 실행을 더 가능하게 한다.(202610240914 김명지 작성)
 
 ---
 
@@ -122,3 +127,37 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - **로그아웃:** DB에서 삭제하면 이후 갱신할 수 없다. (`revokeTokens`)
 - **갱신 시 대조:** 서명이 유효해도 DB 값과 다르면 거부한다. (`refreshTokens`)
 - **Rotation:** 갱신할 때마다 새 토큰으로 덮어써서, 한 번 쓴 토큰은 재사용할 수 없다.
+
+---
+---
+
+## TODO: WebRTC 영상통화 기능 추가 (진행 중)
+> 채팅서비스에 영상통화 기능을 추가한다. 
+> - 영상통화는 1:1만 가능하다. 
+> - ocsmeet의 STOMP 헨들러에 WebRTC Signalling 경로를 추가한다. 
+> - webrtc_kmj01의 TurnController를 가져와서 프로젝트에 추가한다. 
+> - 통화 대상 식별은 userId로 한다. 
+
+### 1단계. TURN 접속 정보 API
+- [ ] TurnController, Service 옮기기
+- [ ] properties 추가하기
+- [ ] Turn 서버 인증용 키 응답용 DTO 작성하기
+- [ ] 
+
+### 2단계. STOMP 시그널링
+- [ ] 
+
+### 3단계. 통화 상태 관리
+- [ ] 
+
+### 4단계. 프론트엔드
+- [ ] 
+
+### 5단계. HTTPS / TURN 서버
+- [ ] 
+
+### 6단계. 통화 기록 (선택)
+- [ ] 
+
+### 7단계. 테스트 / 문서
+- [ ] 

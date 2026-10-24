@@ -33,7 +33,6 @@ build/
 ### check
 .cursor
 .idea
-.mvn
 .vscode/
 docs
 data
