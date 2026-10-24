@@ -36,4 +36,5 @@ build/
 .vscode/
 docs
 data
-# db
+db/data
+db/conf.d
