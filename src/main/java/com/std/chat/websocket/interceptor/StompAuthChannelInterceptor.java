@@ -37,14 +37,16 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
 		if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 			resolveUser(accessor);
-			if (accessor.getUser() == null) {
-				log.warn("STOMP CONNECT rejected: unauthenticated");
-				return null;
-			}
+			validateAuthenticated(accessor);
 			return message;
 		}
 
-		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) { 
+			// RTC Signaling 요청일 때는 사용가 인증 검사를 한다.
+			if(StompDestinationUtils.RTC_USER_QUEUE.equals(accessor.getDestination())) {
+				validateAuthenticated(accessor);
+				return message;
+			}
 			validateRoomAccess(accessor, StompDestinationUtils.extractRoomIdFromSubscribe(accessor.getDestination()));
 			return message;
 		}
@@ -55,6 +57,13 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 		}
 
 		return message;
+	}
+
+	private void  validateAuthenticated(StompHeaderAccessor accessor) {
+		if (accessor.getUser() == null) {
+			log.warn("STOMP {} rejected: unauthenticated", accessor.getCommand());
+			throw new ForbiddenException("Authentication required");
+		}
 	}
 
 	private void resolveUser(StompHeaderAccessor accessor) {
@@ -90,10 +99,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 	}
 
 	private void validateRoomAccess(StompHeaderAccessor accessor, java.util.Optional<Long> roomIdOptional) {
-		if (accessor.getUser() == null) {
-			log.warn("STOMP {} rejected: unauthenticated", accessor.getCommand());
-			throw new ForbiddenException("Authentication required");
-		}
+		validateAuthenticated(accessor);
 
 		Long roomId = roomIdOptional.orElseThrow(() ->
 				new ForbiddenException("Invalid destination: " + accessor.getDestination()));

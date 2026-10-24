@@ -7,7 +7,8 @@ import java.util.regex.Pattern;
 public final class StompDestinationUtils {
 
 	private static final Pattern ROOM_SUBSCRIBE = Pattern.compile("^/sub/rooms/(\\d+)$");
-	private static final Pattern ROOM_SEND = Pattern.compile("^/pub/rooms/(\\d+)/messages$");
+	private static final Pattern ROOM_SEND = Pattern.compile("^/pub/rooms/(\\d+)/(messages|rtc)$");
+	public static final String RTC_USER_QUEUE = "/user/queue/rtc";
 
 	private StompDestinationUtils() {
 	}

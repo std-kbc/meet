@@ -139,3 +139,34 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - **로그아웃:** DB에서 삭제하면 이후 갱신할 수 없다. (`revokeTokens`)
 - **갱신 시 대조:** 서명이 유효해도 DB 값과 다르면 거부한다. (`refreshTokens`)
 - **Rotation:** 갱신할 때마다 새 토큰으로 덮어써서, 한 번 쓴 토큰은 재사용할 수 없다.
+
+---
+## OCSMEET에 화상통화 기능 추가하기
+
+### 1. TURN 자격증명 API ✅
+- [x] `GET /api/turn-credentials` (TurnController, TurnCredentialResponse)
+- [x] 로그인한 userId로 time-limited credential 발급 (HMAC-SHA1)
+
+### 2. STOMP 시그널링 (`/pub/rooms/{id}/rtc` → `/user/queue/rtc`) ✅
+- [x] WebSocketConfig: simple broker에 `/queue` 추가
+- [x] DTO: `SignalingMessageRequest`(targetUserId), `SignalingMessageResponse`(fromUserId), `SignalingMessageType`
+- [x] RtcSignalHandler / RtcSignalingService: `convertAndSendToUser`로 상대방에게만 전달
+- [x] 검증: 보낸 사람·받는 사람 모두 방 참여자, 자기 자신에게 전송 금지
+- [x] StompAuthChannelInterceptor: `/user/queue/rtc` 구독은 로그인만 확인, `/rtc` 전송은 방 검증
+- [x] 브라우저 2개로 동작·보안 테스트
+
+### 3. 통화 상태 / 멀티탭 처리
+- [ ] 
+
+### 4. 프론트엔드
+- [ ] 
+
+### 5. HTTPS / coturn
+- [ ] 
+
+### 6. 통화 기록
+- [ ] 
+
+### 7. 테스트 / 문서
+- [ ] 
+
