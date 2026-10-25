@@ -55,6 +55,20 @@ const WsClient = {
         );
     },
 
+    subscribeUserQueue(destination, onMessage) {
+        if (!this.stompClient || !this.connected) {
+            return null;
+        }
+        return this.stompClient.subscribe(destination, (message) => onMessage(JSON.parse(message.body)));
+    },
+
+    sendRtc(roomId, payload) {
+        if (!this.stompClient || !this.connected) {
+            throw new Error('WebSocket not connected');
+        }
+        this.stompClient.send('/pub/rooms/' + roomId + '/rtc', {}, JSON.stringify(payload));
+    },
+
     unsubscribe() {
         if (this.subscription) {
             this.subscription.unsubscribe();

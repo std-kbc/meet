@@ -190,6 +190,13 @@ async function init() {
         await loadMessages(roomId);
         await WsClient.connect(onWsMessage, updateConnectionStatus);
         WsClient.subscribe(roomId);
+        if (room.roomType === 'DIRECT') {
+            const myId = Number(Auth.getUserId());
+            const partner = detail.participants.find(p => p.userId !== myId);
+            if (partner) {
+                VideoCall.init(roomId, partner.userId, partner.nickname || 'user#' + partner.userId);
+            }
+        }
     } catch (e) {
         showError(e.message);
         document.getElementById('chatRoomName').textContent = '채팅방을 불러올 수 없습니다';

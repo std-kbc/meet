@@ -175,14 +175,44 @@ STOMP `SEND /pub/rooms/{id}/messages`
 | `CALL_REJECTED`, `CALL_CANCEL`, `HANG_UP` | 상대에게 같은 타입 (상대 탭이 정해졌으면 그 탭, 아니면 모든 탭) |
 | `VIDEO_OFFER`, `VIDEO_ANSWER`, `NEW_ICE_CANDIDATE` | 상대의 통화 중인 탭에 그대로 전달 (relay) |
 
-### 4. 프론트엔드
-- [ ] 
+### 4. 프론트엔드 ← 다음 작업
+#### 4-1. 통화 UI + 통화 제어 (영상 없이) ✅
+- [x] `room.html`: 영상통화 버튼, 통화 패널(상태 문구, 영상 영역, 수락/거절/취소/끊기 버튼), `video-call.js` 스크립트 추가
+- [x] `app.css`: 통화 패널 스타일
+- [x] `ws-client.js`: `subscribeUserQueue`(`/user/queue/rtc`, `/user/queue/errors` 구독), `sendRtc`(`/pub/rooms/{id}/rtc` 전송)
+- [x] `video-call.js`(새 파일): 화면 상태 `IDLE`/`CALLING`/`RINGING`/`IN_CALL`, 버튼 동작, 수신 타입별 처리
+- [x] `room.js`: DIRECT 방이면 상대 참여자를 찾아 `VideoCall.init(roomId, partnerId, partnerName)`
+- [x] 브라우저 테스트 (5번 DIRECT 방, user1 ↔ user2): 걸기·수락·끊기·거절·취소, 멀티탭 `ANSWERED_ELSEWHERE`
+
+#### 4-2. WebRTC 영상 연결
+- [ ] `GET /api/turn-credentials`로 ICE 서버를 받아 `RTCPeerConnection` 생성
+- [ ] `getUserMedia`로 카메라·마이크 → `localVideo`, 트랙을 PeerConnection에 추가
+- [ ] 건 사람: `CALL_ACCEPTED` 수신 후 `VIDEO_OFFER` 전송 (그 전에 보내면 서버가 거절)
+- [ ] 받는 사람: `VIDEO_OFFER` 수신 → `VIDEO_ANSWER` 전송
+- [ ] `onicecandidate` → `NEW_ICE_CANDIDATE` 전송 (ice는 `JSON.stringify`), 수신 시 `addIceCandidate`
+- [ ] `ontrack` → `remoteVideo` 표시
+- [ ] 통화 종료 시 정리: PeerConnection close, 카메라 트랙 stop
+- [ ] 카메라 권한 거부·장치 없음 처리
+- [ ] 브라우저 테스트: 실제 영상·음성 통화
 
 ### 5. HTTPS / coturn
-- [ ] 
+- [ ] coturn 실행 설정 (`--use-auth-secret --static-auth-secret`), 서버 실행 옵션 `-Dturn.secret`, `-Dturn.url.internal`, `-Dturn.url.external`
+- [ ] `turn.secret` 기본값(`change_this_secret`) 대신 환경변수로 주입
+- [ ] HTTPS 적용: `getUserMedia`는 localhost가 아니면 HTTPS에서만 동작
+- [ ] 다른 PC/네트워크 간 통화 테스트 (TURN 경유 확인)
 
 ### 6. 통화 기록
-- [ ] 
+- [ ] 통화 기록 테이블 설계 (caller, callee, room, 시작·종료 시각, 결과: 완료/거절/취소/부재중)
+- [ ] 통화 종료 지점(`handleEndCall`, `handleDisconnect`)에서 기록 저장
+- [ ] 조회 API 또는 채팅방에 시스템 메시지로 표시
 
 ### 7. 테스트 / 문서
-- [ ] 
+- [ ] `CallSessionRegistry` 단위 테스트 (걸기·수락·종료·멀티탭·동시 요청)
+- [ ] 시그널링 통합 테스트 (`WebSocketStompClient`로 지금의 수동 스크립트 시나리오를 JUnit으로 옮기기)
+- [ ] README에 화상통화 흐름(통화 상태, 메시지 타입, 구독 주소) 정리
+
+### 개선 백로그 (나중에)
+- [ ] RINGING 타임아웃: 일정 시간 안 받으면 자동 취소 (받는 사람이 모든 탭을 닫은 경우 포함)
+- [ ] 다른 방 화면에서도 전화를 받을 수 있는 전역 수신 UI (지금은 그 방 화면에서만 벨이 울림)
+- [ ] 서버 여러 대 운영 시 `CallSessionRegistry`를 Redis로 이전
+- [ ] `CallerBusyException` 메시지 정리 ("caller is already on call")
