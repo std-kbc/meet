@@ -156,7 +156,23 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - [x] 브라우저 2개로 동작·보안 테스트
 
 ### 3. 통화 상태 / 멀티탭 처리
-- [ ] 
+- [x] `CallSession`(caller/callee/room/status/탭) + `CallSessionRegistry`(메모리 `ConcurrentHashMap`, `synchronized`)
+- [x] 통화 제어 타입 추가: `CALL_REQUEST`, `CALL_ACCEPTED`, `CALL_REJECTED`, `CALL_CANCEL`, `HANG_UP` + 서버 전용 `CALL_BUSY`, `CALL_ANSWERED_ELSEWHERE`
+- [x] 상대가 통화 중이면 `CALL_BUSY` (`CalleeBusyException`)
+- [x] 멀티탭: 먼저 수락한 탭만 통화, 나머지 탭은 `CALL_ANSWERED_ELSEWHERE` (`SimpUserRegistry`, 세션 지정 전송)
+- [x] relay: IN_CALL 상태 + 통화 중인 탭끼리만 OFFER/ANSWER/ICE 전달
+- [x] 자동 테스트 20/20 통과 (걸기, 통화 중, 멀티탭 수락, relay 차단, 끊기, 재통화)
+- [ ] 브라우저를 닫으면 통화 자동 종료 (`SessionDisconnectEvent`)
+- [ ] 실패를 보낸 사람에게 알리기 (`@MessageExceptionHandler`)
+- [ ] DIRECT 방에서만 통화 허용
+
+| 받은 메시지 | 보낼 대상과 내용 |
+|---|---|
+| `CALL_REQUEST` 성공 | 받는 사람의 모든 탭에 `CALL_REQUEST` |
+| `CALL_REQUEST` 실패 (상대가 바쁨) | 건 사람의 탭에 `CALL_BUSY` |
+| `CALL_ACCEPTED` | 건 사람의 탭에 `CALL_ACCEPTED` + 받는 사람의 나머지 탭에 `CALL_ANSWERED_ELSEWHERE` |
+| `CALL_REJECTED`, `CALL_CANCEL`, `HANG_UP` | 상대에게 같은 타입 (상대 탭이 정해졌으면 그 탭, 아니면 모든 탭) |
+| `VIDEO_OFFER`, `VIDEO_ANSWER`, `NEW_ICE_CANDIDATE` | 상대의 통화 중인 탭에 그대로 전달 (relay) |
 
 ### 4. 프론트엔드
 - [ ] 
@@ -169,4 +185,3 @@ STOMP `SEND /pub/rooms/{id}/messages`
 
 ### 7. 테스트 / 문서
 - [ ] 
-
