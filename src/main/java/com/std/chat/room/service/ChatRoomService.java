@@ -145,6 +145,12 @@ public class ChatRoomService {
 		assertActiveParticipant(roomId, userId);
 	}
 
+	public void validateDirectRoom(Long roomId) {
+		if (findActiveRoom(roomId).getRoomType() != RoomType.DIRECT) {
+			throw new BadRequestException("Video call is only available in DIRECT rooms");
+		}
+	}
+
 	private void validateCreateRequest(Long userId, CreateChatRoomRequest request) {
 		if (request.getRoomType() == RoomType.DIRECT) {
 			if (request.getTargetUserId() == null) {
@@ -186,7 +192,7 @@ public class ChatRoomService {
 	}
 
 	private ChatRoomResponse toResponse(ChatRoom room, int participantCount, ParticipantRole myParticipantRole,
-										String lastMessage) {
+			String lastMessage) {
 		return ChatRoomResponse.builder()
 				.id(room.getId())
 				.roomType(room.getRoomType())

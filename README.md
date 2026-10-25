@@ -163,8 +163,9 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - [x] relay: IN_CALL 상태 + 통화 중인 탭끼리만 OFFER/ANSWER/ICE 전달
 - [x] 브라우저를 닫으면 통화 자동 종료 (`SessionDisconnectEvent` → 통화 중인 탭일 때만 상대에게 `HANG_UP`)
 - [x] 자동 테스트 24/24 통과 (걸기, 통화 중, 멀티탭 수락, relay 차단, 끊기, 재통화, 연결 끊김)
-- [ ] 실패를 보낸 사람에게 알리기 (`@MessageExceptionHandler`)
-- [ ] DIRECT 방에서만 통화 허용
+- [x] 실패를 보낸 사람에게 알리기 (`@MessageExceptionHandler` → 보낸 탭의 `/user/queue/errors`로 `ErrorResponse`)
+- [x] DIRECT 방에서만 통화 허용 (`ChatRoomService.validateDirectRoom`)
+- [x] DIRECT 방 자동 테스트 16/16, 오류 알림 테스트 8/8 통과
 
 | 받은 메시지 | 보낼 대상과 내용 |
 |---|---|

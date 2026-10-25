@@ -85,6 +85,8 @@ public class RtcSignalingService {
 
 		log.info("inbound Signaling Message Type: CALL_REQUEST");
 
+		chatRoomService.validateDirectRoom(roomId);
+
 		try {
 			callSessionRegistry.createCall(callerId, calleeId, roomId, sessionId);
 		} catch (CalleeBusyException e) {
