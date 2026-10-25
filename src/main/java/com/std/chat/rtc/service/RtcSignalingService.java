@@ -79,6 +79,7 @@ public class RtcSignalingService {
 				String.valueOf(toUserId), "/queue/rtc", payload, headers.getMessageHeaders());
 	}
 
+	// CALL_REQUESTED HANDLER
 	private void handleCallRequest(Long callerId, Long calleeId, Long roomId, String sessionId,
 			SignalingMessageRequest request) {
 
@@ -97,24 +98,7 @@ public class RtcSignalingService {
 		messagingTemplate.convertAndSendToUser(String.valueOf(calleeId), "/queue/rtc", response);
 	}
 
-	private void handleEndCall(Long senderId, SignalingMessageType type) {
-
-		log.info("inbound Signaling Message Type: {}", type);
-
-		CallSession callSession = callSessionRegistry.endCall(senderId);
-		Long partnerId = callSession.partnerOf(senderId);
-		String partnerSessionId = callSession.sessionIdOf(partnerId);
-
-		SignalingMessageResponse response = toResponse(senderId, type);
-		if (partnerSessionId != null) {
-			// 상대가 쓰는 탭을 알고 있음 → 그 탭에만
-			sendToSession(partnerId, partnerSessionId, response);
-		} else {
-			// 상대가 아직 받기 전(모든 탭에서 벨이 울리는 중) → 모든 탭에
-			messagingTemplate.convertAndSendToUser(String.valueOf(partnerId), "/queue/rtc", response);
-		}
-	}
-
+	// CALL_ACCEPTED HANDLER
 	private void handleCallAccepted(Long callerId, Long calleeId, String calleeSessionId,
 			SignalingMessageRequest request) {
 
@@ -148,6 +132,38 @@ public class RtcSignalingService {
 		}
 	}
 
+	// END CALL
+	private void handleEndCall(Long senderId, SignalingMessageType type) {
+
+		log.info("inbound Signaling Message Type: {}", type);
+
+		CallSession callSession = callSessionRegistry.endCall(senderId);
+		notifyPartner(callSession, senderId, type);
+	}
+
+	// 브라우저 탭이 닫히거나 연결이 끊겼을 때 (RtcDisconnectListener에서 호출)
+	public void handleDisconnect(Long userId, String sessionId) {
+		CallSession callSession = callSessionRegistry.endCallBySession(userId, sessionId);
+		if (callSession == null) {
+			return;
+		}
+		log.info("call ended by disconnect: userId={}", userId);
+		notifyPartner(callSession, userId, SignalingMessageType.HANG_UP);
+	}
+
+	private void notifyPartner(CallSession callSession, Long senderId, SignalingMessageType type) {
+		Long partnerId = callSession.partnerOf(senderId);
+		String partnerSessionId = callSession.sessionIdOf(partnerId);
+
+		SignalingMessageResponse response = toResponse(senderId, type);
+		if (partnerSessionId != null) {
+			sendToSession(partnerId, partnerSessionId, response);
+		} else {
+			messagingTemplate.convertAndSendToUser(String.valueOf(partnerId), "/queue/rtc", response);
+		}
+	}
+
+	// RELAY
 	private void relay(Long senderId, String senderSessionId, SignalingMessageRequest request) {
 
 		CallSession callSession = callSessionRegistry.getCall(senderId);

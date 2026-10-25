@@ -17,15 +17,14 @@ public class CallSessionRegistry {
 
     // 전화 걸기
     public synchronized CallSession createCall(
-                            Long callerId,
-                            Long calleeId, 
-                            Long roomId, 
-                            String calleSessionId) 
-    {
+            Long callerId,
+            Long calleeId,
+            Long roomId,
+            String calleSessionId) {
         // validation
-        if(calls.get(callerId) != null) {
+        if (calls.get(callerId) != null) {
             throw new CallerBusyException("caller is already on call");
-        }else if (calls.get(calleeId) != null) {
+        } else if (calls.get(calleeId) != null) {
             throw new CalleeBusyException("callee is already on call");
         }
 
@@ -45,17 +44,17 @@ public class CallSessionRegistry {
 
     // 수락
     public synchronized CallSession acknowledgeCall(Long calleeId, String calleeSessionId) {
-        
+
         // check is session of callee exist
         CallSession callSession = calls.get(calleeId);
-        if(callSession == null) {
+        if (callSession == null) {
             throw new BadRequestException("no call is ringing");
-        }else if(!calleeId.equals(callSession.getCalleeId())) {
+        } else if (!calleeId.equals(callSession.getCalleeId())) {
             throw new BadRequestException("only callee can accept");
         }
-        
+
         // check is the session is available
-        if(CallStatus.IN_CALL == callSession.getStatus()) {
+        if (CallStatus.IN_CALL == callSession.getStatus()) {
             throw new CallAlreadyAnsweredException("callee is already on call");
         }
 
@@ -69,7 +68,7 @@ public class CallSessionRegistry {
     // 종료
     public synchronized CallSession endCall(Long userId) {
         CallSession callSession = calls.get(userId);
-        if(callSession == null) {
+        if (callSession == null) {
             throw new BadRequestException("no call exist");
         }
         calls.remove(callSession.getCalleeId());
@@ -78,7 +77,18 @@ public class CallSessionRegistry {
     }
 
     // 조회
-    public synchronized CallSession getCall(Long userId){
+    public synchronized CallSession getCall(Long userId) {
         return calls.get(userId);
+    }
+
+    // 연결 끊김: 끊긴 탭이 이 통화에 쓰이던 탭일 때만 종료 (아니면 null)
+    public synchronized CallSession endCallBySession(Long userId, String sessionId) {
+        CallSession callSession = calls.get(userId);
+        if (callSession == null || !sessionId.equals(callSession.sessionIdOf(userId))) {
+            return null;
+        }
+        calls.remove(callSession.getCallerId());
+        calls.remove(callSession.getCalleeId());
+        return callSession;
     }
 }

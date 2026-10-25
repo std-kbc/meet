@@ -161,8 +161,8 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - [x] 상대가 통화 중이면 `CALL_BUSY` (`CalleeBusyException`)
 - [x] 멀티탭: 먼저 수락한 탭만 통화, 나머지 탭은 `CALL_ANSWERED_ELSEWHERE` (`SimpUserRegistry`, 세션 지정 전송)
 - [x] relay: IN_CALL 상태 + 통화 중인 탭끼리만 OFFER/ANSWER/ICE 전달
-- [x] 자동 테스트 20/20 통과 (걸기, 통화 중, 멀티탭 수락, relay 차단, 끊기, 재통화)
-- [ ] 브라우저를 닫으면 통화 자동 종료 (`SessionDisconnectEvent`)
+- [x] 브라우저를 닫으면 통화 자동 종료 (`SessionDisconnectEvent` → 통화 중인 탭일 때만 상대에게 `HANG_UP`)
+- [x] 자동 테스트 24/24 통과 (걸기, 통화 중, 멀티탭 수락, relay 차단, 끊기, 재통화, 연결 끊김)
 - [ ] 실패를 보낸 사람에게 알리기 (`@MessageExceptionHandler`)
 - [ ] DIRECT 방에서만 통화 허용
 
