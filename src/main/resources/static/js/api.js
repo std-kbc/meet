@@ -58,5 +58,9 @@ const Api = {
             url += '&cursor=' + cursor;
         }
         return this.request(url);
-    }
+    },
+
+    getIceServers() {
+        return this.request('/api/rtc/ice-servers');
+    },
 };

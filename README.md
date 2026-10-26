@@ -143,8 +143,8 @@ STOMP `SEND /pub/rooms/{id}/messages`
 ---
 ## OCSMEET에 화상통화 기능 추가하기
 
-### 1. TURN 자격증명 API ✅
-- [x] `GET /api/turn-credentials` (TurnController, TurnCredentialResponse)
+### 1. ICE 서버 API (STUN + TURN) ✅
+- [x] `GET /api/rtc/ice-servers` (IceServerController, IceServerResponse): STUN + TURN
 - [x] 로그인한 userId로 time-limited credential 발급 (HMAC-SHA1)
 
 ### 2. STOMP 시그널링 (`/pub/rooms/{id}/rtc` → `/user/queue/rtc`) ✅
@@ -185,7 +185,7 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - [x] 브라우저 테스트 (5번 DIRECT 방, user1 ↔ user2): 걸기·수락·끊기·거절·취소, 멀티탭 `ANSWERED_ELSEWHERE`
 
 #### 4-2. WebRTC 영상 연결
-- [ ] `GET /api/turn-credentials`로 ICE 서버를 받아 `RTCPeerConnection` 생성
+- [ ] `GET /api/rtc/ice-servers`로 ICE 서버를 받아 `RTCPeerConnection` 생성
 - [ ] `getUserMedia`로 카메라·마이크 → `localVideo`, 트랙을 PeerConnection에 추가
 - [ ] 건 사람: `CALL_ACCEPTED` 수신 후 `VIDEO_OFFER` 전송 (그 전에 보내면 서버가 거절)
 - [ ] 받는 사람: `VIDEO_OFFER` 수신 → `VIDEO_ANSWER` 전송
@@ -196,7 +196,7 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - [ ] 브라우저 테스트: 실제 영상·음성 통화
 
 ### 5. HTTPS / coturn
-- [ ] coturn 실행 설정 (`--use-auth-secret --static-auth-secret`), 서버 실행 옵션 `-Dturn.secret`, `-Dturn.url.internal`, `-Dturn.url.external`
+- [ ] coturn 실행 설정 (`--use-auth-secret --static-auth-secret`), 서버 실행 옵션 `-Dturn.secret`, `-Dturn.url.internal`, `-Dturn.url.external`, `-Dstun.url`
 - [ ] `turn.secret` 기본값(`change_this_secret`) 대신 환경변수로 주입
 - [ ] HTTPS 적용: `getUserMedia`는 localhost가 아니면 HTTPS에서만 동작
 - [ ] 다른 PC/네트워크 간 통화 테스트 (TURN 경유 확인)

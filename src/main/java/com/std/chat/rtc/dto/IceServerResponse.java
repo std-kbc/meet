@@ -1,11 +1,13 @@
-package com.std.chat.turn.dto;
-import java.util.List;
+package com.std.chat.rtc.dto;
 
-public class TurnCredentialResponse {
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+public class IceServerResponse {
 
     private List<IceServer> iceServers;
 
-    public TurnCredentialResponse(List<IceServer> iceServers) {
+    public IceServerResponse(List<IceServer> iceServers) {
         this.iceServers = iceServers;
     }
 
@@ -13,6 +15,7 @@ public class TurnCredentialResponse {
         return iceServers;
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class IceServer {
         private String urls;
         private String username;
@@ -24,8 +27,16 @@ public class TurnCredentialResponse {
             this.credential = credential;
         }
 
-        public String getUrls()       { return urls; }
-        public String getUsername()   { return username; }
-        public String getCredential() { return credential; }
+        public String getUrls() {
+            return urls;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getCredential() {
+            return credential;
+        }
     }
 }
