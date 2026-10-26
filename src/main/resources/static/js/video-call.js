@@ -211,14 +211,17 @@ const VideoCall = {
 
     setState(state, statusText = '') {
         this.state = state;
+        const inCall = state === 'IN_CALL';
         const show = (id, visible) => { document.getElementById(id).hidden = !visible; };
         show('callBtn', state === 'IDLE');
-        show('callPanel', state !== 'IDLE');
+        show('callPanel', state === 'CALLING' || state === 'RINGING');
         show('acceptCallBtn', state === 'RINGING');
         show('rejectCallBtn', state === 'RINGING');
         show('cancelCallBtn', state === 'CALLING');
-        show('hangUpBtn', state === 'IN_CALL');
-        show('callVideos', state === 'IN_CALL');
+        show('callStage', inCall);
+        document.querySelector('.page-room').classList.toggle('in-call', inCall);
         document.getElementById('callStatus').textContent = statusText;
+        document.getElementById('callStageStatus').textContent = statusText;
     }
+
 };
