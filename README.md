@@ -175,7 +175,7 @@ STOMP `SEND /pub/rooms/{id}/messages`
 | `CALL_REJECTED`, `CALL_CANCEL`, `HANG_UP` | 상대에게 같은 타입 (상대 탭이 정해졌으면 그 탭, 아니면 모든 탭) |
 | `VIDEO_OFFER`, `VIDEO_ANSWER`, `NEW_ICE_CANDIDATE` | 상대의 통화 중인 탭에 그대로 전달 (relay) |
 
-### 4. 프론트엔드 ← 다음 작업
+### 4. 프론트엔드 ✅
 #### 4-1. 통화 UI + 통화 제어 (영상 없이) ✅
 - [x] `room.html`: 영상통화 버튼, 통화 패널(상태 문구, 영상 영역, 수락/거절/취소/끊기 버튼), `video-call.js` 스크립트 추가
 - [x] `app.css`: 통화 패널 스타일
@@ -184,24 +184,63 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - [x] `room.js`: DIRECT 방이면 상대 참여자를 찾아 `VideoCall.init(roomId, partnerId, partnerName)`
 - [x] 브라우저 테스트 (5번 DIRECT 방, user1 ↔ user2): 걸기·수락·끊기·거절·취소, 멀티탭 `ANSWERED_ELSEWHERE`
 
-#### 4-2. WebRTC 영상 연결
-- [ ] `GET /api/rtc/ice-servers`로 ICE 서버를 받아 `RTCPeerConnection` 생성
-- [ ] `getUserMedia`로 카메라·마이크 → `localVideo`, 트랙을 PeerConnection에 추가
-- [ ] 건 사람: `CALL_ACCEPTED` 수신 후 `VIDEO_OFFER` 전송 (그 전에 보내면 서버가 거절)
-- [ ] 받는 사람: `VIDEO_OFFER` 수신 → `VIDEO_ANSWER` 전송
-- [ ] `onicecandidate` → `NEW_ICE_CANDIDATE` 전송 (ice는 `JSON.stringify`), 수신 시 `addIceCandidate`
-- [ ] `ontrack` → `remoteVideo` 표시
-- [ ] 통화 종료 시 정리: PeerConnection close, 카메라 트랙 stop
-- [ ] 카메라 권한 거부·장치 없음 처리
-- [ ] 브라우저 테스트: 실제 영상·음성 통화
+#### 4-2. WebRTC 영상 연결 ✅
+- [x] `GET /api/rtc/ice-servers`로 ICE 서버를 받아 `RTCPeerConnection` 생성
+- [x] `getUserMedia`로 카메라·마이크 → `localVideo`, 트랙을 PeerConnection에 추가
+- [x] 건 사람: `CALL_ACCEPTED` 수신 후 `VIDEO_OFFER` 전송 (그 전에 보내면 서버가 거절)
+- [x] 받는 사람: `VIDEO_OFFER` 수신 → `VIDEO_ANSWER` 전송
+- [x] `onicecandidate` → `NEW_ICE_CANDIDATE` 전송 (ice는 `JSON.stringify`), 수신 시 `addIceCandidate`
+- [x] `ontrack` → `remoteVideo` 표시
+- [x] 통화 종료 시 정리: PeerConnection close, 카메라 트랙 stop
+- [x] 카메라 권한 거부·장치 없음 처리
+- [x] 브라우저 테스트: 실제 영상·음성 통화
+- [x] 통화 중 레이아웃: 왼쪽 영상, 오른쪽 채팅
 
-### 5. HTTPS / coturn
-- [ ] coturn 실행 설정 (`--use-auth-secret --static-auth-secret`), 서버 실행 옵션 `-Dturn.secret`, `-Dturn.url.internal`, `-Dturn.url.external`, `-Dstun.url`
-- [ ] `turn.secret` 기본값(`change_this_secret`) 대신 환경변수로 주입
-- [ ] HTTPS 적용: `getUserMedia`는 localhost가 아니면 HTTPS에서만 동작
-- [ ] 다른 PC/네트워크 간 통화 테스트 (TURN 경유 확인)
+### 5. HTTPS / coturn ✅
+#### 5-1. HTTPS ✅
+- [x] mkcert 인증서(`cert/ocsmeet.p12`, git 제외) + `https` 프로필(`application-https.properties`, 8443)
+- [x] 실행: `./mvnw spring-boot:run -Dspring-boot.run.profiles=https`
+- [x] 같은 와이파이의 휴대폰에서 `https://{Mac IP}:8443` 접속·영상통화 성공
+- 주의: Mac IP가 바뀌면(DHCP) 인증서를 새 IP로 다시 생성
 
-### 6. 통화 기록
+#### 5-2. coturn + ICE 서버 설정 환경변수화 ✅
+- [x] ICE 서버 설정을 `-D` 시스템 프로퍼티 대신 `application.properties` + 환경변수(`RTC_STUN_URL`, `RTC_TURN_URLS`, `RTC_TURN_SECRET`)로
+- [x] 로컬 환경변수 파일(`.env.rtc`, git 제외)
+- [x] coturn 실행 (`--use-auth-secret --static-auth-secret`, relay 포트 범위 지정)
+
+#### 5-3. TURN 검증 ✅
+- [x] `turnutils_uclient`로 발급 credential 할당 성공 / 틀린 credential 거절 확인
+- [x] `room.html?id=5&relay` → `iceTransportPolicy: 'relay'`로 TURN 경유 통화 성공 (Mac ↔ 휴대폰)
+
+#### 화상통화 테스트 실행 방법 (같은 와이파이)
+```bash
+# 0) Mac IP 확인. 바뀌었으면 인증서와 .env.rtc의 IP를 새 IP로
+ipconfig getifaddr en0
+mkcert -pkcs12 -p12-file cert/ocsmeet.p12 localhost 127.0.0.1 {Mac IP}
+
+# .env.rtc (git 제외)
+export RTC_TURN_SECRET={openssl rand -hex 32 결과}
+export RTC_STUN_URL=stun:{Mac IP}:53478
+export RTC_TURN_URLS=turn:{Mac IP}:53478
+
+# 1) 터미널 1: coturn
+source .env.rtc
+turnserver -p 53478 \
+  --listening-ip={Mac IP} --relay-ip={Mac IP} \
+  --realm=ocsmeet \
+  --use-auth-secret --static-auth-secret="$RTC_TURN_SECRET" \
+  --min-port=49160 --max-port=49200 \
+  --fingerprint --no-tls --no-dtls --no-cli \
+  --log-file=stdout --verbose
+
+# 2) 터미널 2: Spring (HTTPS)
+source .env.rtc
+./mvnw spring-boot:run -Dspring-boot.run.profiles=https
+
+# 3) 접속: https://{Mac IP}:8443/room.html?id={DIRECT 방 번호}   (TURN 강제: 뒤에 &relay)
+```
+
+### 6. 통화 기록 ← 다음 작업
 - [ ] 통화 기록 테이블 설계 (caller, callee, room, 시작·종료 시각, 결과: 완료/거절/취소/부재중)
 - [ ] 통화 종료 지점(`handleEndCall`, `handleDisconnect`)에서 기록 저장
 - [ ] 조회 API 또는 채팅방에 시스템 메시지로 표시
@@ -216,3 +255,5 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - [ ] 다른 방 화면에서도 전화를 받을 수 있는 전역 수신 UI (지금은 그 방 화면에서만 벨이 울림)
 - [ ] 서버 여러 대 운영 시 `CallSessionRegistry`를 Redis로 이전
 - [ ] `CallerBusyException` 메시지 정리 ("caller is already on call")
+- [ ] 운영 프로필에서 `RTC_TURN_SECRET` 기본값 제거 (환경변수 없으면 서버 시작 실패하도록)
+- [ ] 다른 네트워크 간 통화: 공인 IP, 포트포워딩(8443, 53478, relay 포트 범위), coturn `-X 공인IP/내부IP`

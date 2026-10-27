@@ -38,3 +38,9 @@ docs
 data
 db/data
 db/conf.d
+
+### 로컬 인증서
+cert/
+
+### 환경 변수
+.env*

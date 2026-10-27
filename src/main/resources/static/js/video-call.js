@@ -114,7 +114,12 @@ const VideoCall = {
         this.localStream = stream;
         document.getElementById('localVideo').srcObject = stream;
 
-        this.pc = new RTCPeerConnection({ iceServers: ice.iceServers });
+        // 테스트용: URL에 &relay가 있으면 TURN 경유만 허용
+        const forceRelay = new URLSearchParams(location.search).has('relay');
+        this.pc = new RTCPeerConnection({
+            iceServers: ice.iceServers,
+            iceTransportPolicy: forceRelay ? 'relay' : 'all'
+        });
         stream.getTracks().forEach(track => this.pc.addTrack(track, stream));
 
         this.pc.onicecandidate = (event) => {
