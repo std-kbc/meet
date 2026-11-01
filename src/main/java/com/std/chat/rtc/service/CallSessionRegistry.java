@@ -11,6 +11,10 @@ import com.std.chat.rtc.exception.CalleeBusyException;
 import com.std.chat.rtc.exception.CallerBusyException;
 import com.std.chat.common.exception.BadRequestException;
 
+/**
+ * CallSessionRegistry
+ * 영상 통화 세션 기억 저장소와 해당 저장소에 등록, 삭제하는 기능을 담은 클래스
+ */
 @Component
 public class CallSessionRegistry {
 

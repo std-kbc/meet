@@ -242,12 +242,16 @@ source .env.rtc
 # 3) 접속: https://{Mac IP}:8443/room.html?id={DIRECT 방 번호}   (TURN 강제: 뒤에 &relay)
 ```
 
-### 6. 통화 기록 ← 다음 작업
-- [ ] 통화 기록 테이블 설계 (caller, callee, room, 시작·종료 시각, 결과: 완료/거절/취소/부재중)
-- [ ] 통화 종료 지점(`handleEndCall`, `handleDisconnect`)에서 기록 저장
-- [ ] 조회 API 또는 채팅방에 시스템 메시지로 표시
+### 6. 통화 기록 ✅
+- [x] `call_history` 테이블 (`db/initdb.d/03-call-history.sql`): caller, callee, room, 결과, 건·받은·종료 시각
+- [x] 결과 `CallResult`: `COMPLETED`(연결 후 종료), `REJECTED`(거절), `MISSED`(받기 전 종료). `CALL_BUSY`는 기록 안 함
+- [x] 통화 종료 지점(`handleEndCall`, `handleDisconnect`)에서 `CallHistoryService.record` 호출 (실패해도 통화 종료 처리에는 영향 없음)
+- [x] 채팅방에 `SYSTEM` 메시지로 표시 (`ChatMessageService.sendSystemMessage`): "📞 영상통화 · 2초", "📞 거절된 영상통화", "📞 부재중 영상통화"
+- [x] 화면: 시스템 메시지를 가운데 회색 안내로 표시
+- [x] 자동 테스트 5/5 (완료·거절·부재중·탭 닫힘)
+- 기존 DB에는 직접 적용: `docker exec -i mariadb mariadb -uroot -papplication < db/initdb.d/03-call-history.sql`
 
-### 7. 테스트 / 문서
+### 7. 테스트 / 문서 ← 다음 작업
 - [ ] `CallSessionRegistry` 단위 테스트 (걸기·수락·종료·멀티탭·동시 요청)
 - [ ] 시그널링 통합 테스트 (`WebSocketStompClient`로 지금의 수동 스크립트 시나리오를 JUnit으로 옮기기)
 - [ ] README에 화상통화 흐름(통화 상태, 메시지 타입, 구독 주소) 정리
