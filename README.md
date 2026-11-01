@@ -251,12 +251,13 @@ source .env.rtc
 - [x] 자동 테스트 5/5 (완료·거절·부재중·탭 닫힘)
 - 기존 DB에는 직접 적용: `docker exec -i mariadb mariadb -uroot -papplication < db/initdb.d/03-call-history.sql`
 
-### 7. 테스트 / 문서 ← 다음 작업
-- [ ] `CallSessionRegistry` 단위 테스트 (걸기·수락·종료·멀티탭·동시 요청)
-- [ ] 시그널링 통합 테스트 (`WebSocketStompClient`로 지금의 수동 스크립트 시나리오를 JUnit으로 옮기기)
-- [ ] README에 화상통화 흐름(통화 상태, 메시지 타입, 구독 주소) 정리
+### 7. 테스트 / 문서 ✅
+- [x] `CallSessionRegistry` 단위 테스트 16개 (걸기·수락·종료·연결 끊김·동시 요청)
+- [x] 시그널링 통합 테스트 6개 (`WebSocketStompClient`, `ChatRoomService`·`CallHistoryService`는 Mock)
+- [x] README에 화상통화 흐름(구성 요소, 주소, 통화 상태, 메시지 타입, 실패 응답, 테스트) 정리
 
 ### 개선 백로그 (나중에)
+- [ ] 같은 탭에서 보낸 메시지의 처리 순서 보장: 서버 inbound 채널이 스레드 풀이라 `VIDEO_OFFER`보다 `NEW_ICE_CANDIDATE`가 먼저 전달될 수 있음 (`StompEndpointRegistry.setPreserveReceiveOrder(true)` 검토)
 - [ ] RINGING 타임아웃: 일정 시간 안 받으면 자동 취소 (받는 사람이 모든 탭을 닫은 경우 포함)
 - [ ] 다른 방 화면에서도 전화를 받을 수 있는 전역 수신 UI (지금은 그 방 화면에서만 벨이 울림)
 - [ ] 서버 여러 대 운영 시 `CallSessionRegistry`를 Redis로 이전
