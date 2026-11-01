@@ -259,6 +259,10 @@ source .env.rtc
 - [x] 시그널링 통합 테스트 6개 (`WebSocketStompClient`, `ChatRoomService`·`CallHistoryService`는 Mock)
 - [x] README에 화상통화 흐름(구성 요소, 주소, 통화 상태, 메시지 타입, 실패 응답, 테스트) 정리
 
+### 7-추가. WebRTC 연결 정보 패널 ✅
+- [x] `rtc-monitor.js`: 방 헤더에 나/상대, 시그널 로그(OFFER/ANSWER/ICE 후보), 연결 상태, 채택된 경로(host/srflx/relay + IP), RTT, 송수신 속도·누적량 표시
+- [x] 전송량은 `pc.getStats()`의 채택된 candidate pair를 1초마다 조회 (9단계 사용량 측정의 브라우저 쪽 데이터)
+
 ### 개선 백로그 (나중에)
 - [ ] 같은 탭에서 보낸 메시지의 처리 순서 보장: 서버 inbound 채널이 스레드 풀이라 `VIDEO_OFFER`보다 `NEW_ICE_CANDIDATE`가 먼저 전달될 수 있음 (`StompEndpointRegistry.setPreserveReceiveOrder(true)` 검토)
 - [ ] RINGING 타임아웃: 일정 시간 안 받으면 자동 취소 (받는 사람이 모든 탭을 닫은 경우 포함)
@@ -272,11 +276,18 @@ source .env.rtc
 ## AWS 배포 / 비용 기반 통화 제어
 
 ### 8. AWS 배포 (EC2 1대 + Docker Compose, 보유 도메인) ← 다음 작업
-#### 8-1. 운영 설정 준비 (로컬에서)
-- [ ] `prod` 프로필: DB·Redis 비밀번호, JWT 키, TURN secret을 환경변수로 (기본값 없음 → 없으면 시작 실패)
-- [ ] `Dockerfile` (멀티 스테이지: 빌드 → 실행 이미지)
+#### 8-1. 운영 설정 준비 (로컬에서) ← 다음에 여기부터
+- [ ] `application-prod.properties`: 기본값 없는 환경변수로 덮어쓰기 (없으면 서버 시작 실패)
+  - DB: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` / Redis: `REDIS_HOST`, `REDIS_PASSWORD`
+  - `JWT_SECRET` (지금 `application.properties`의 키는 개발용), `COOKIE_DOMAIN`
+  - `RTC_STUN_URL`, `RTC_TURN_URLS`, `RTC_TURN_SECRET`
+  - `server.forward-headers-strategy` 설정 (Caddy 뒤에서 https 요청으로 인식)
+- [ ] `Dockerfile` (멀티 스테이지: Maven 빌드 → Java 17 실행 이미지)
 - [ ] `compose.prod.yaml`: app, mariadb, redis, coturn, Caddy(HTTPS 리버스 프록시, Let's Encrypt 자동 발급)
-- [ ] DB·Redis 포트는 외부에 열지 않음 (컨테이너 네트워크 안에서만)
+- [ ] `Caddyfile`: `{도메인}` → `app:8080` (WebSocket `/ws` 포함)
+- [ ] DB·Redis 포트는 외부에 열지 않음 (컨테이너 네트워크 안에서만), DB 초기화 스크립트(`db/initdb.d`) 연결
+- [ ] coturn 통계를 Spring이 읽을 수 있게 설정 (9단계 측정용: 로그 또는 Prometheus)
+- [ ] `.env.prod.example` (변수 이름만, 값 없이 커밋) + 실제 `.env`는 git 제외
 - [ ] 로컬에서 prod compose 실행 확인
 
 #### 8-2. AWS 리소스
@@ -296,8 +307,10 @@ source .env.rtc
 - [ ] 와이파이 PC ↔ LTE 휴대폰 통화, `&relay`로 TURN 경유 통화
 
 ### 9. 비용 기반 통화 제어 (예산 초과 예측 시 TURN만 차단, P2P 허용)
-- [ ] 측정: 통화별 연결 방식(P2P/relay)과 relay 전송량 기록 (브라우저 `getStats()` + coturn 통계로 대조)
-- [ ] 환산: 단가 설정(`rtc.cost.*`) × 사용량 → 이번 달 누적 비용, 월말 예상 비용
+- [ ] 측정: coturn 통계로 relay 전송량을 사용자별·일별 저장 (username `만료시각:userId`), 브라우저 `getStats()`는 참고·대조용
+- [ ] 환산: 단가 설정(`rtc.cost.*`: 월 예산, 고정비, GB당 단가, 무료 제공량, 차단 기준 90%) — 최신 AWS 요금 확인 후 입력
+- [ ] 예측: 예상 비용 = 고정비 + (이번 달 누적 + 최근 7일 하루 평균 × 남은 일수) × GB당 단가 (`@Scheduled`로 주기 계산)
+- [ ] 교차 검증: CloudWatch `NetworkOut`과 측정값 비교, AWS Budgets 예측 알림을 최후 안전장치로
 - [ ] 제한: 예상 비용이 예산을 넘으면 `/api/rtc/ice-servers`가 TURN을 빼고 STUN만 반환
 - [ ] TURN credential 유효 시간 단축 (지금 24시간 → 이미 발급된 credential로 계속 쓰는 것 방지)
 - [ ] 화면: relay 없이 연결에 실패하면 안내 문구
