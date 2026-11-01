@@ -14,6 +14,8 @@ const VideoCall = {
         this.partnerId = partnerId;
         this.partnerName = partnerName;
 
+        RtcMonitor.init({ myId: Auth.getUserId(), myName: Auth.getNickname(), partnerId, partnerName });
+
         WsClient.subscribeUserQueue('/user/queue/rtc', (msg) => this.onSignal(msg));
         WsClient.subscribeUserQueue('/user/queue/errors', (err) => this.onError(err));
 
@@ -58,6 +60,9 @@ const VideoCall = {
         if (msg.fromUserId !== this.partnerId) {
             return; // 이 방의 상대가 아닌 사람의 통화는 이 화면에서 처리하지 않음
         }
+
+        RtcMonitor.log('recv', msg.type, msg);
+
         switch (msg.type) {
             case 'CALL_REQUEST':
                 this.setState('RINGING', `${this.partnerName}님의 영상통화 요청`);
@@ -121,6 +126,8 @@ const VideoCall = {
             iceTransportPolicy: forceRelay ? 'relay' : 'all'
         });
         stream.getTracks().forEach(track => this.pc.addTrack(track, stream));
+
+        RtcMonitor.attach(this.pc);
 
         this.pc.onicecandidate = (event) => {
             if (event.candidate) {
@@ -186,6 +193,9 @@ const VideoCall = {
 
     closePeer() {
         if (this.pc) {
+
+            RtcMonitor.detach();
+
             this.pc.onicecandidate = null;
             this.pc.ontrack = null;
             this.pc.onconnectionstatechange = null;
@@ -203,6 +213,7 @@ const VideoCall = {
 
     // ── 공통 ──
     send(type, extra = {}) {
+        RtcMonitor.log('send', type, extra);
         WsClient.sendRtc(this.roomId, { targetUserId: this.partnerId, type, ...extra });
     },
 

@@ -48,6 +48,28 @@
               ></span>
               <span id="connectionLabel">연결 안 됨</span>
             </p>
+            <details class="rtc-monitor" id="rtcMonitor" hidden>
+              <summary>WebRTC 연결 정보</summary>
+              <dl class="rtc-info">
+                <dt>나</dt>
+                <dd id="rtcMe">-</dd>
+                <dt>상대</dt>
+                <dd id="rtcPartner">-</dd>
+                <dt>상태</dt>
+                <dd id="rtcStates">통화 없음</dd>
+                <dt>내 경로</dt>
+                <dd id="rtcLocal">-</dd>
+                <dt>상대 경로</dt>
+                <dd id="rtcRemote">-</dd>
+                <dt>왕복 지연</dt>
+                <dd id="rtcRtt">-</dd>
+                <dt>송신</dt>
+                <dd id="rtcSent">-</dd>
+                <dt>수신</dt>
+                <dd id="rtcReceived">-</dd>
+              </dl>
+              <ol class="rtc-log" id="rtcLog"></ol>
+            </details>
           </div>
           <div class="chat-header-actions">
             <button class="btn-outline btn-sm" id="backBtn">← 목록</button>
@@ -89,6 +111,7 @@
     <script src="/js/auth.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/ws-client.js"></script>
+    <script src="/js/rtc-monitor.js"></script>
     <script src="/js/video-call.js"></script>
     <script src="/js/room.js"></script>
   </body>

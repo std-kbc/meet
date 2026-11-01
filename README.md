@@ -5,7 +5,7 @@ WebSocket, STOMP 프로토콜 형식에 따라 구현한 간단한 채팅 서비
 REST API(방 관리, 메시지 조회)와 WebSocket(실시간 메시지 전송)을 함께 사용한다.
 
 ![실행화면](./readme_img_src/스크린샷%202026-11-01%20오후%203.06.16.png)
-
+![실시간통신로그기능](./readme_img_src/스크린샷%202026-11-01%20오후%2011.05.51.png)
 ---
 
 ### 주요 기능
@@ -266,4 +266,39 @@ source .env.rtc
 - [ ] 서버 여러 대 운영 시 `CallSessionRegistry`를 Redis로 이전
 - [ ] `CallerBusyException` 메시지 정리 ("caller is already on call")
 - [ ] 운영 프로필에서 `RTC_TURN_SECRET` 기본값 제거 (환경변수 없으면 서버 시작 실패하도록)
-- [ ] 다른 네트워크 간 통화: 공인 IP, 포트포워딩(8443, 53478, relay 포트 범위), coturn `-X 공인IP/내부IP`
+- [ ] 다른 네트워크 간 통화: 공인 IP, 포트포워딩(8443, 53478, relay 포트 범위), coturn `-X 공인IP/내부IP` → 8단계에서 EC2로 해결
+
+---
+## AWS 배포 / 비용 기반 통화 제어
+
+### 8. AWS 배포 (EC2 1대 + Docker Compose, 보유 도메인) ← 다음 작업
+#### 8-1. 운영 설정 준비 (로컬에서)
+- [ ] `prod` 프로필: DB·Redis 비밀번호, JWT 키, TURN secret을 환경변수로 (기본값 없음 → 없으면 시작 실패)
+- [ ] `Dockerfile` (멀티 스테이지: 빌드 → 실행 이미지)
+- [ ] `compose.prod.yaml`: app, mariadb, redis, coturn, Caddy(HTTPS 리버스 프록시, Let's Encrypt 자동 발급)
+- [ ] DB·Redis 포트는 외부에 열지 않음 (컨테이너 네트워크 안에서만)
+- [ ] 로컬에서 prod compose 실행 확인
+
+#### 8-2. AWS 리소스
+- [ ] AWS Budgets 알림 먼저 설정 (예상치 못한 요금 방지)
+- [ ] EC2 + Elastic IP (고정 공인 IP)
+- [ ] 보안 그룹: 22(내 IP만), 80/443, 3478(UDP/TCP), relay 포트 범위(UDP)
+- [ ] 도메인 DNS A 레코드 → Elastic IP
+
+#### 8-3. 배포
+- [ ] 서버에 Docker 설치, 서버 전용 `.env` 작성 (git 제외)
+- [ ] `docker compose -f compose.prod.yaml up -d`
+- [ ] `https://{도메인}` 접속, 로그인·채팅 확인
+
+#### 8-4. coturn 검증 (다른 네트워크 간 통화)
+- [ ] coturn `--external-ip={공인IP}/{사설IP}` (EC2는 NAT 뒤에 있음)
+- [ ] `turnutils_uclient`로 credential 확인
+- [ ] 와이파이 PC ↔ LTE 휴대폰 통화, `&relay`로 TURN 경유 통화
+
+### 9. 비용 기반 통화 제어 (예산 초과 예측 시 TURN만 차단, P2P 허용)
+- [ ] 측정: 통화별 연결 방식(P2P/relay)과 relay 전송량 기록 (브라우저 `getStats()` + coturn 통계로 대조)
+- [ ] 환산: 단가 설정(`rtc.cost.*`) × 사용량 → 이번 달 누적 비용, 월말 예상 비용
+- [ ] 제한: 예상 비용이 예산을 넘으면 `/api/rtc/ice-servers`가 TURN을 빼고 STUN만 반환
+- [ ] TURN credential 유효 시간 단축 (지금 24시간 → 이미 발급된 credential로 계속 쓰는 것 방지)
+- [ ] 화면: relay 없이 연결에 실패하면 안내 문구
+- [ ] 확인: 관리자용 비용 조회 API, AWS Cost Explorer 실제 요금과 예측 비교
