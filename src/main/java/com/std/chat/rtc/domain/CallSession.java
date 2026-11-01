@@ -1,5 +1,7 @@
 package com.std.chat.rtc.domain;
 
+import java.time.LocalDateTime;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,7 +14,9 @@ public class CallSession {
     private CallStatus status;
     private String callerSessionId;
     private String calleeSessionId;
-    
+    private LocalDateTime requestedAt; // 건 시각
+    private LocalDateTime answeredAt; // 받은 시각 (받기 전이면 null)
+
     // 이 통화에서 userId의 상대방
     public Long partnerOf(Long userId) {
         return callerId.equals(userId) ? calleeId : callerId;

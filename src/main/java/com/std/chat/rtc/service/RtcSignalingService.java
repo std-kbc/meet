@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.std.chat.rtc.dto.SignalingMessageResponse;
 import com.std.chat.rtc.exception.CallAlreadyAnsweredException;
 import com.std.chat.rtc.exception.CalleeBusyException;
+import com.std.chat.rtc.domain.CallResult;
 import com.std.chat.rtc.domain.CallSession;
 import com.std.chat.rtc.domain.CallStatus;
 import com.std.chat.rtc.domain.SignalingMessageType;
@@ -26,13 +27,16 @@ public class RtcSignalingService {
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ChatRoomService chatRoomService;
 	private final SimpUserRegistry simpUserRegistry;
+	private final CallHistoryService callHistoryService;
 
 	public RtcSignalingService(SimpMessagingTemplate messagingTemplate, ChatRoomService chatRoomService,
-			CallSessionRegistry callSessionRegistry, SimpUserRegistry simpUserRegistry) {
+			CallSessionRegistry callSessionRegistry, SimpUserRegistry simpUserRegistry,
+			CallHistoryService callHistoryService) {
 		this.messagingTemplate = messagingTemplate;
 		this.chatRoomService = chatRoomService;
 		this.callSessionRegistry = callSessionRegistry;
 		this.simpUserRegistry = simpUserRegistry;
+		this.callHistoryService = callHistoryService;
 	}
 
 	public void sendSignal(Long fromUserId, Long roomId, String sessionId, SignalingMessageRequest request) {
@@ -141,6 +145,7 @@ public class RtcSignalingService {
 
 		CallSession callSession = callSessionRegistry.endCall(senderId);
 		notifyPartner(callSession, senderId, type);
+		recordHistory(callSession, type);
 	}
 
 	// 브라우저 탭이 닫히거나 연결이 끊겼을 때 (RtcDisconnectListener에서 호출)
@@ -151,6 +156,7 @@ public class RtcSignalingService {
 		}
 		log.info("call ended by disconnect: userId={}", userId);
 		notifyPartner(callSession, userId, SignalingMessageType.HANG_UP);
+		recordHistory(callSession, SignalingMessageType.HANG_UP);
 	}
 
 	private void notifyPartner(CallSession callSession, Long senderId, SignalingMessageType type) {
@@ -162,6 +168,23 @@ public class RtcSignalingService {
 			sendToSession(partnerId, partnerSessionId, response);
 		} else {
 			messagingTemplate.convertAndSendToUser(String.valueOf(partnerId), "/queue/rtc", response);
+		}
+	}
+
+	private void recordHistory(CallSession callSession, SignalingMessageType endType) {
+		CallResult result;
+		if (callSession.getStatus() == CallStatus.IN_CALL) {
+			result = CallResult.COMPLETED;
+		} else if (endType == SignalingMessageType.CALL_REJECTED) {
+			result = CallResult.REJECTED;
+		} else {
+			result = CallResult.MISSED;
+		}
+
+		try {
+			callHistoryService.record(callSession, result);
+		} catch (Exception e) {
+			log.error("failed to record call history: roomId={}", callSession.getRoomId(), e);
 		}
 	}
 

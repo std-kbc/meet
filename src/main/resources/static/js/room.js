@@ -36,6 +36,17 @@ function renderMessage(msg) {
         placeholder.remove();
     }
 
+    if (msg.messageType === 'SYSTEM') {
+        const div = document.createElement('div');
+        div.className = 'message message-system';
+        div.dataset.messageId = msg.id;
+        div.innerHTML = `${escapeHtml(msg.message)} <span class="message-system-time">${formatTime(msg.sentAt)}</span>`;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return;
+    }
+
+
     const isMine = String(msg.senderId) === Auth.getUserId();
     const senderLabel = isMine
         ? '나'

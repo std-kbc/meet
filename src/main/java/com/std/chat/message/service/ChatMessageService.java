@@ -55,6 +55,22 @@ public class ChatMessageService {
 		return response;
 	}
 
+	@Transactional
+	public void sendSystemMessage(Long roomId, Long senderId, String content) {
+		ChatMessage chatMessage = new ChatMessage();
+		chatMessage.setChatRoomId(roomId);
+		chatMessage.setSenderId(senderId);
+		chatMessage.setMessageType(MessageType.SYSTEM);
+		chatMessage.setMessage(content);
+		chatMessage.setStatus(MessageStatus.NORMAL);
+		chatMessage.setSentAt(LocalDateTime.now());
+		chatMessageMapper.insert(chatMessage);
+
+		chatMessageMapper.findById(chatMessage.getId())
+				.map(this::toResponse)
+				.ifPresent(response -> messagingTemplate.convertAndSend("/sub/rooms/" + roomId, response));
+	}
+
 	@Transactional(readOnly = true)
 	public ChatMessageListResponse getMessages(Long userId, Long roomId, Long cursor, Integer size) {
 		chatRoomService.validateActiveParticipant(userId, roomId);

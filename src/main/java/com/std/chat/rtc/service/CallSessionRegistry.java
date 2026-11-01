@@ -1,5 +1,6 @@
 package com.std.chat.rtc.service;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,7 @@ public class CallSessionRegistry {
         callSession.setCalleeId(calleeId);
         callSession.setCallerSessionId(calleSessionId);
         callSession.setStatus(CallStatus.RINGING);
+        callSession.setRequestedAt(LocalDateTime.now());
 
         // register
         calls.put(callerId, callSession);
@@ -61,6 +63,7 @@ public class CallSessionRegistry {
         // set callee's session id
         callSession.setCalleeSessionId(calleeSessionId);
         callSession.setStatus(CallStatus.IN_CALL);
+        callSession.setAnsweredAt(LocalDateTime.now());
 
         return callSession;
     }
