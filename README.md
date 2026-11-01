@@ -142,6 +142,9 @@ STOMP `SEND /pub/rooms/{id}/messages`
 - **갱신 시 대조:** 서명이 유효해도 DB 값과 다르면 거부한다. (`refreshTokens`)
 - **Rotation:** 갱신할 때마다 새 토큰으로 덮어써서, 한 번 쓴 토큰은 재사용할 수 없다.
 
+## 화상통화 기능 흐름
+구성 요소, 시그널링 주소, 통화 상태, 메시지 타입, 테스트 방법은 [docs/video-call.md](docs/video-call.md)에 정리했다.
+
 ---
 ## OCSMEET에 화상통화 기능 추가하기
 
