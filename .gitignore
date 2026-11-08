@@ -34,7 +34,6 @@ build/
 .cursor
 .idea
 .vscode/
-docs
 data
 db/data
 db/conf.d
