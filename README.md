@@ -4,6 +4,8 @@
 WebSocket, STOMP 프로토콜 형식에 따라 구현한 간단한 채팅 서비스이다.
 REST API(방 관리, 메시지 조회)와 WebSocket(실시간 메시지 전송)을 함께 사용한다.
 
+실세 프로젝트 링크: (https://ocsmeet.kmjoyit.xyz)[https://ocsmeet.kmjoyit.xyz]
+
 ![실행화면](./readme_img_src/스크린샷%202026-11-01%20오후%203.06.16.png)
 ![실시간통신로그기능](./readme_img_src/스크린샷%202026-11-01%20오후%2011.05.51.png)
 ---
