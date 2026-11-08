@@ -270,12 +270,12 @@ source .env.rtc
 - [ ] 서버 여러 대 운영 시 `CallSessionRegistry`를 Redis로 이전
 - [ ] `CallerBusyException` 메시지 정리 ("caller is already on call")
 - [ ] 운영 프로필에서 `RTC_TURN_SECRET` 기본값 제거 (환경변수 없으면 서버 시작 실패하도록)
-- [ ] 다른 네트워크 간 통화: 공인 IP, 포트포워딩(8443, 53478, relay 포트 범위), coturn `-X 공인IP/내부IP` → 8단계에서 EC2로 해결
+- [ ] 다른 네트워크 간 통화: 공인 IP, 포트포워딩(8443, 53478, relay 포트 범위), coturn `-X 공인IP/내부IP` → 8단계에서 Lightsail로 해결
 
 ---
-## AWS 배포 / 비용 기반 통화 제어
+## AWS Lightsail 배포 / 비용 기반 통화 제어
 
-### 8. AWS 배포 (EC2 1대 + Docker Compose, 보유 도메인) ← 다음 작업
+### 8. AWS Lightsail 배포 (인스턴스 1대 + Docker Compose, 보유 도메인) ← 다음 작업
 #### 8-1. 운영 설정 준비 (로컬에서) ← 다음에 여기부터
 - [ ] `application-prod.properties`: 기본값 없는 환경변수로 덮어쓰기 (없으면 서버 시작 실패)
   - DB: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` / Redis: `REDIS_HOST`, `REDIS_PASSWORD`
@@ -290,11 +290,13 @@ source .env.rtc
 - [ ] `.env.prod.example` (변수 이름만, 값 없이 커밋) + 실제 `.env`는 git 제외
 - [ ] 로컬에서 prod compose 실행 확인
 
-#### 8-2. AWS 리소스
+#### 8-2. Lightsail 리소스
 - [ ] AWS Budgets 알림 먼저 설정 (예상치 못한 요금 방지)
-- [ ] EC2 + Elastic IP (고정 공인 IP)
-- [ ] 보안 그룹: 22(내 IP만), 80/443, 3478(UDP/TCP), relay 포트 범위(UDP)
-- [ ] 도메인 DNS A 레코드 → Elastic IP
+- [ ] Lightsail 인스턴스: 메모리 2GB 이상, **IPv4 포함 플랜** (IPv6 전용 플랜은 TURN에 사용 불가), 리전 서울
+- [ ] 플랜의 월 데이터 전송 허용량·초과 단가 확인 (9단계 판단 기준)
+- [ ] Static IP 생성 후 인스턴스에 연결 (연결된 동안 추가 요금 없음)
+- [ ] Lightsail 방화벽: 22(내 IP만), 80/443, 3478(UDP/TCP), relay 포트 범위(UDP)
+- [ ] 도메인 DNS A 레코드 → Static IP
 
 #### 8-3. 배포
 - [ ] 서버에 Docker 설치, 서버 전용 `.env` 작성 (git 제외)
@@ -302,16 +304,16 @@ source .env.rtc
 - [ ] `https://{도메인}` 접속, 로그인·채팅 확인
 
 #### 8-4. coturn 검증 (다른 네트워크 간 통화)
-- [ ] coturn `--external-ip={공인IP}/{사설IP}` (EC2는 NAT 뒤에 있음)
+- [ ] coturn `--external-ip={공인IP}/{사설IP}` (Lightsail 인스턴스는 NAT 뒤에 있음)
 - [ ] `turnutils_uclient`로 credential 확인
 - [ ] 와이파이 PC ↔ LTE 휴대폰 통화, `&relay`로 TURN 경유 통화
 
-### 9. 비용 기반 통화 제어 (예산 초과 예측 시 TURN만 차단, P2P 허용)
+### 9. 비용 기반 통화 제어 (전송 허용량 초과 예측 시 TURN만 차단, P2P 허용)
 - [ ] 측정: coturn 통계로 relay 전송량을 사용자별·일별 저장 (username `만료시각:userId`), 브라우저 `getStats()`는 참고·대조용
-- [ ] 환산: 단가 설정(`rtc.cost.*`: 월 예산, 고정비, GB당 단가, 무료 제공량, 차단 기준 90%) — 최신 AWS 요금 확인 후 입력
-- [ ] 예측: 예상 비용 = 고정비 + (이번 달 누적 + 최근 7일 하루 평균 × 남은 일수) × GB당 단가 (`@Scheduled`로 주기 계산)
-- [ ] 교차 검증: CloudWatch `NetworkOut`과 측정값 비교, AWS Budgets 예측 알림을 최후 안전장치로
-- [ ] 제한: 예상 비용이 예산을 넘으면 `/api/rtc/ice-servers`가 TURN을 빼고 STUN만 반환
+- [ ] 설정(`rtc.cost.*`): 플랜 월 전송 허용량(GB), 차단 기준(예: 90%), 초과 단가(참고용)
+- [ ] 예측: 예상 전송량 = 이번 달 누적 + 최근 7일 하루 평균 × 남은 일수 (`@Scheduled`로 주기 계산)
+- [ ] 교차 검증: Lightsail 인스턴스 지표(`NetworkOut`, Lightsail API)와 측정값 비교, AWS Budgets 알림을 최후 안전장치로
+- [ ] 제한: 예상 전송량이 허용량 × 차단 기준을 넘으면 `/api/rtc/ice-servers`가 TURN을 빼고 STUN만 반환
 - [ ] TURN credential 유효 시간 단축 (지금 24시간 → 이미 발급된 credential로 계속 쓰는 것 방지)
 - [ ] 화면: relay 없이 연결에 실패하면 안내 문구
 - [ ] 확인: 관리자용 비용 조회 API, AWS Cost Explorer 실제 요금과 예측 비교

@@ -1,0 +1,10 @@
+# 이미지 빌드에 필요 없는 파일 (비밀값 포함 파일은 반드시 제외)
+.git
+.env*
+cert/
+target/
+db/
+data/
+docs/
+readme_img_src/
+*.md
