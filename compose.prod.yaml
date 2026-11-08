@@ -98,6 +98,11 @@ services:
       - --denied-peer-ip=169.254.0.0-169.254.255.255
       - --denied-peer-ip=172.16.0.0-172.31.255.255
       - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --allowed-peer-ip=${PRIVATE_IP}
+      # TURN 전송량 상한 (비용 보호): 할당 1개마다 max-bps(바이트/초)를 예약한다
+      #   동시 할당 수 = bps-capacity / max-bps, 월 최대 전송량 ≈ bps-capacity × 2,592,000초
+      - --max-bps=${TURN_MAX_BPS:-125000}
+      - --bps-capacity=${TURN_BPS_CAPACITY:-500000}
       - --log-file=stdout
 
 volumes:

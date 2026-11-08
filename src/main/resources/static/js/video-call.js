@@ -9,6 +9,11 @@ const VideoCall = {
     localStream: null,        // 내 카메라·마이크
     queue: Promise.resolve(), // 영상 관련 작업을 도착 순서대로 하나씩 처리
 
+    // [8-4] TURN(relay) 경유 통화는 짧게만 허용 (사용자 안내용. 실제 전송량 상한은 coturn --bps-capacity)
+    RELAY_LIMIT_MS: 20000,
+    RELAY_END_NOTICE: 'TURN 서버를 경유하는 연결이 20초 동안 유지되어 통화를 종료했습니다',
+    relayTimer: null,
+
     init(roomId, partnerId, partnerName) {
         this.roomId = roomId;
         this.partnerId = partnerId;
@@ -89,12 +94,18 @@ const VideoCall = {
                 this.endCall('다른 탭에서 통화를 받았습니다');
                 break;
             case 'HANG_UP':
-                this.endCall(`${this.partnerName}님이 통화를 종료했습니다`);
+                // 상대가 relay 시간 초과로 먼저 끊은 경우에도 같은 안내를 보여 준다
+                this.endCall(this.relayTimer
+                    ? this.RELAY_END_NOTICE
+                    : `${this.partnerName}님이 통화를 종료했습니다`);
                 break;
         }
     },
 
     onError(err) {
+        if (this.state === 'IDLE') {
+            return; // 이미 끝난 통화에 대한 늦은 오류 (예: 양쪽이 거의 동시에 끊은 경우)
+        }
         showError(err.message);
         if (this.state === 'CALLING') {
             this.setState('IDLE');
@@ -138,11 +149,36 @@ const VideoCall = {
             document.getElementById('remoteVideo').srcObject = event.streams[0];
         };
         this.pc.onconnectionstatechange = () => {
+            if (this.pc && this.pc.connectionState === 'connected') {
+                this.limitRelay(this.pc);
+            }
             if (this.pc && this.pc.connectionState === 'failed') {
                 this.hangUp();
                 showError('영상 연결에 실패했습니다');
             }
         };
+    },
+
+    // [8-4] relay로 연결됐으면 RELAY_LIMIT_MS 뒤에 한 번 더 확인하고, 그때도 relay면 통화 종료
+    async limitRelay(pc) {
+        if (this.relayTimer || !(await this.isRelay(pc))) {
+            return;
+        }
+        this.relayTimer = setTimeout(async () => {
+            if (pc === this.pc && await this.isRelay(pc)) {
+                this.send('HANG_UP');
+                this.endCall(this.RELAY_END_NOTICE);
+            }
+            this.relayTimer = null;
+        }, this.RELAY_LIMIT_MS);
+    },
+
+    // 채택된 경로의 양쪽 후보 중 하나라도 relay(TURN)인지
+    async isRelay(pc) {
+        const stats = await pc.getStats();
+        const pair = RtcMonitor.selectedPair(stats);
+        return !!pair && [pair.localCandidateId, pair.remoteCandidateId]
+            .some((id) => stats.get(id)?.candidateType === 'relay');
     },
 
     async startOffer() {
@@ -192,6 +228,8 @@ const VideoCall = {
     },
 
     closePeer() {
+        clearTimeout(this.relayTimer);
+        this.relayTimer = null;
         if (this.pc) {
 
             RtcMonitor.detach();

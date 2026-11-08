@@ -275,40 +275,87 @@ source .env.rtc
 ---
 ## AWS Lightsail 배포 / 비용 기반 통화 제어
 
-### 8. AWS Lightsail 배포 (인스턴스 1대 + Docker Compose, 보유 도메인) ← 다음 작업
-#### 8-1. 운영 설정 준비 (로컬에서) ← 다음에 여기부터
-- [x] `application-prod.properties`: 기본값 없는 환경변수로 덮어쓰기 (없으면 서버 시작 실패)
+### 8. AWS Lightsail 배포 (인스턴스 1대 + Docker Compose, 보유 도메인)
+#### 8-1. 운영 설정 준비 (로컬에서) ✅
+- [x] `application-prod.properties`: 기본값 없는 환경변수로 덮어쓰기
   - DB: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` / Redis: `REDIS_HOST`, `REDIS_PASSWORD`
   - `JWT_SECRET` (지금 `application.properties`의 키는 개발용), `COOKIE_DOMAIN`
   - `RTC_STUN_URL`, `RTC_TURN_URLS`, `RTC_TURN_SECRET`
   - `server.forward-headers-strategy` 설정 (Caddy 뒤에서 https 요청으로 인식)
-- [ ] `Dockerfile` (멀티 스테이지: Maven 빌드 → Java 17 실행 이미지)
-- [ ] `compose.prod.yaml`: app, mariadb, redis, coturn, Caddy(HTTPS 리버스 프록시, Let's Encrypt 자동 발급)
-- [ ] `Caddyfile`: `{도메인}` → `app:8080` (WebSocket `/ws` 포함)
-- [ ] DB·Redis 포트는 외부에 열지 않음 (컨테이너 네트워크 안에서만), DB 초기화 스크립트(`db/initdb.d`) 연결
-- [ ] coturn 통계를 Spring이 읽을 수 있게 설정 (9단계 측정용: 로그 또는 Prometheus)
-- [ ] `.env.prod.example` (변수 이름만, 값 없이 커밋) + 실제 `.env`는 git 제외
-- [ ] 로컬에서 prod compose 실행 확인
+  - JWT·TURN 값이 없으면 시작 실패, DB·Redis 값이 틀리면 첫 요청 때 에러
+- [x] `Dockerfile` (멀티 스테이지: Maven 빌드 → Java 17 JRE, `TZ=Asia/Seoul`, root 아닌 사용자로 실행) + `.dockerignore`
+- [x] `compose.prod.yaml`: app, mariadb, redis, coturn, Caddy (`name: ocsmeet-prod`로 프로젝트 이름 고정)
+- [x] `Caddyfile`: `{$DOMAIN}` → `app:8080` (WebSocket 포함, Let's Encrypt 자동 발급·갱신)
+- [x] DB·Redis·app 포트는 외부에 열지 않음, DB 초기화는 스키마만 (`02-seed.sql` 테스트 계정 제외)
+- [x] coturn: `network_mode: host`, `--external-ip`, 내부망 중계 금지(`--denied-peer-ip`)
+- [x] `.env.prod.example` (변수 이름만 커밋) + 실제 `.env`는 git 제외
+- [x] 로컬에서 prod compose 실행 확인 (`DOMAIN=localhost` → Caddy 자체 인증서)
+- 실행 (로컬 확인·서버 공통): `docker compose -f compose.prod.yaml up -d --build`
 
-#### 8-2. Lightsail 리소스
-- [ ] AWS Budgets 알림 먼저 설정 (예상치 못한 요금 방지)
-- [ ] Lightsail 인스턴스: 메모리 2GB 이상, **IPv4 포함 플랜** (IPv6 전용 플랜은 TURN에 사용 불가), 리전 서울
-- [ ] 플랜의 월 데이터 전송 허용량·초과 단가 확인 (9단계 판단 기준)
-- [ ] Static IP 생성 후 인스턴스에 연결 (연결된 동안 추가 요금 없음)
-- [ ] Lightsail 방화벽: 22(내 IP만), 80/443, 3478(UDP/TCP), relay 포트 범위(UDP)
-- [ ] 도메인 DNS A 레코드 → Static IP
+#### 8-2. Lightsail 리소스 ✅
+- [ ] AWS Budgets 알림 설정 (예상치 못한 요금 방지)
+- [x] Lightsail 인스턴스: 2GB, Dual-stack(IPv4 포함), 서울, Ubuntu 24.04
+- [x] 플랜의 월 데이터 전송 허용량·초과 단가 기록 (9단계 판단 기준) - 3TB, 초과 $0.13/GB(서울, 나가는 트래픽만)
+- [x] Static IP 연결
+- [x] Lightsail 방화벽: 22(내 IP만 + 브라우저 SSH), 80/443, 3478(UDP/TCP), 49160-49200(UDP)
+- [x] 도메인 DNS A 레코드 → Static IP
+- 참고: 22번 포트가 막힌 네트워크에서는 콘솔의 브라우저 SSH 사용
 
-#### 8-3. 배포
-- [ ] 서버에 Docker 설치, 서버 전용 `.env` 작성 (git 제외)
-- [ ] `docker compose -f compose.prod.yaml up -d`
-- [ ] `https://{도메인}` 접속, 로그인·채팅 확인
+#### 8-3. 배포 ✅
+- [x] 스왑 2GB 추가 (서버에서 이미지 빌드 시 메모리 부족 방지)
+- [x] Docker 설치 (`get.docker.com`), `ubuntu` 사용자 docker 그룹 추가 (다시 로그인해야 적용)
+- [x] `git clone` 후 서버 전용 `.env` 작성 (비밀값은 서버에서 `openssl rand`로 생성, `chmod 600`)
+- [x] `docker compose -f compose.prod.yaml up -d --build`
+- [x] 운영 계정 생성: `./scripts/create-user.sh <username> <nickname>` (Caddy `hash-password`로 bcrypt 해시)
+- [x] `https://{도메인}` 접속, 로그인 확인
+- 겪은 문제: `.gitignore`의 `docs` 규칙이 `src/.../docs` 패키지까지 제외 → 서버 컴파일 실패 (규칙 삭제로 해결), 큰 파일 push 시 HTTP 400 → `git config http.postBuffer 157286400`
+- 코드 반영: 로컬에서 push → 서버에서 `git pull` → `docker compose -f compose.prod.yaml up -d --build`
 
-#### 8-4. coturn 검증 (다른 네트워크 간 통화)
-- [ ] coturn `--external-ip={공인IP}/{사설IP}` (Lightsail 인스턴스는 NAT 뒤에 있음)
-- [ ] `turnutils_uclient`로 credential 확인
-- [ ] 와이파이 PC ↔ LTE 휴대폰 통화, `&relay`로 TURN 경유 통화
+#### 8-4. coturn 검증 (다른 네트워크 간 통화) ✅
+- [x] coturn `--external-ip={공인IP}/{사설IP}` (Lightsail 인스턴스는 NAT 뒤에 있음)
+- [x] `--allowed-peer-ip={사설IP}`: 양쪽 모두 TURN을 쓸 때 서버 자신의 사설 IP가 `--denied-peer-ip`에 막히지 않게
+- [x] `&relay`로 TURN 경유 통화 성공
+- 로그 확인: `./scripts/logs.sh` (app), `docker compose -f compose.prod.yaml logs -f coturn`
 
-### 9. 비용 기반 통화 제어 (전송 허용량 초과 예측 시 TURN만 차단, P2P 허용)
+#### 8-5. TURN 비용 보호 ✅
+TURN은 영상을 서버가 대신 전달하므로 서버 전송량(=비용)이 생긴다. P2P 통화는 서버를 거치지 않아 비용이 없다.
+
+| 장치 | 위치 | 하는 일 |
+|---|---|---|
+| `--max-bps=125000` | coturn | 통로(할당) 1개의 속도 상한 125KB/s(1Mbps). 넘으면 브라우저가 화질을 낮춤 |
+| `--bps-capacity=500000` | coturn | 서버 전체 속도 상한 500KB/s. 통로를 빌려줄 때마다 125,000씩 미리 차감 → **통로 최대 4개** |
+| `rtc.turn-ttl-seconds=3600` | `application-prod.properties` | TURN credential 유효 시간 1시간 (유출돼도 오래 못 씀) |
+| 20초 후 종료 | `video-call.js` | relay로 연결되면 20초 뒤 안내와 함께 통화 종료 (사용자 안내용, 우회 가능) |
+
+- 실제 비용 상한은 **coturn 설정**이 보장한다. 브라우저 코드(20초 종료)는 수정·우회할 수 있어서 비용 보호 장치가 아니다.
+- 값 변경: 서버 `.env`에 `TURN_MAX_BPS`, `TURN_BPS_CAPACITY` (바이트/초)
+
+**동시 TURN 통화 수** (통로 4개 기준)
+| 통화 형태 | 통로 사용 | 동시 통화 |
+|---|---|---|
+| 두 사람 모두 TURN | 4개 (사람당 UDP 1 + TCP 1) | **1건** |
+| 한 사람만 TURN | 2개 | 2건 |
+| P2P | 0개 | 제한 없음 |
+
+통로가 없으면 coturn이 거절(`486`)하고, 브라우저는 P2P로만 연결을 시도한다.
+`동시 TURN 통화 수 × 통화당 속도 ≤ bps-capacity` → 비용을 유지하면서 동시 통화를 늘리려면 `max-bps`를 낮춘다(화질 저하).
+
+**최대 비용** (Lightsail 2GB 플랜: 월 $12, 전송 허용량 3TB, 받는 양+보내는 양 합산)
+| 최악의 경우 (30일 내내 최대 속도) | 양 |
+|---|---|
+| 보내는 양 500KB/s × 2,592,000초 | 약 1.3TB |
+| 받는 양 (coturn이 따로 제한) | 약 1.3TB |
+| 합계 | **약 2.6TB < 3TB → 초과 요금 0원, 최대 월 $12** |
+- relay 테스트 링크: https://{도메인}/room.html?id={방 번호}&relay
+- `bps-capacity` 한계: 약 520,000 (31일 × 받기·보내기 합계가 3TB 미만). 더 올리면 초과 요금($0.13/GB, 나가는 양) 가능
+- 실제로는 TURN 통화가 20초에 끝나서 1건당 약 20MB
+- coturn 제한 밖인 웹 트래픽 등은 AWS Budgets 알림으로 감시
+- 확인 필요: P2P로 연결되는 통화도 후보 수집 중 잠깐 통로를 빌릴 수 있음 (coturn 로그로 반납 시점 확인)
+
+### 9. 비용 기반 통화 제어 (전송 허용량 초과 예측 시 TURN만 차단, P2P 허용) — 보류
+> 8-5의 coturn 상한으로 최대 비용이 이미 고정되어 당장은 필요 없음. 사용량 통계·예측이 필요해지면 진행.
+
+- [ ] coturn 통계를 Spring이 읽을 수 있게 설정 (로그 또는 Prometheus)
 - [ ] 측정: coturn 통계로 relay 전송량을 사용자별·일별 저장 (username `만료시각:userId`), 브라우저 `getStats()`는 참고·대조용
 - [ ] 설정(`rtc.cost.*`): 플랜 월 전송 허용량(GB), 차단 기준(예: 90%), 초과 단가(참고용)
 - [ ] 예측: 예상 전송량 = 이번 달 누적 + 최근 7일 하루 평균 × 남은 일수 (`@Scheduled`로 주기 계산)
