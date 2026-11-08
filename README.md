@@ -277,7 +277,7 @@ source .env.rtc
 
 ### 8. AWS Lightsail 배포 (인스턴스 1대 + Docker Compose, 보유 도메인) ← 다음 작업
 #### 8-1. 운영 설정 준비 (로컬에서) ← 다음에 여기부터
-- [ ] `application-prod.properties`: 기본값 없는 환경변수로 덮어쓰기 (없으면 서버 시작 실패)
+- [x] `application-prod.properties`: 기본값 없는 환경변수로 덮어쓰기 (없으면 서버 시작 실패)
   - DB: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` / Redis: `REDIS_HOST`, `REDIS_PASSWORD`
   - `JWT_SECRET` (지금 `application.properties`의 키는 개발용), `COOKIE_DOMAIN`
   - `RTC_STUN_URL`, `RTC_TURN_URLS`, `RTC_TURN_SECRET`

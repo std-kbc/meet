@@ -1,29 +1,107 @@
-# docker compose up -d
-version: '3'
+# 운영 구성 (로컬 확인과 서버 배포에서 같은 명령 사용)
+#   docker compose -f compose.prod.yaml up -d --build
+# ${...} 값은 같은 폴더의 .env에서 읽는다 (.env.prod.example 참고, .env는 git 제외)
+name: ocsmeet-prod
+
 services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mariadb://mariadb:3306/DEMO
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_DOMAIN: ${DOMAIN}
+      RTC_STUN_URL: stun:${DOMAIN}:3478
+      RTC_TURN_URLS: turn:${DOMAIN}:3478?transport=udp,turn:${DOMAIN}:3478?transport=tcp
+      RTC_TURN_SECRET: ${RTC_TURN_SECRET}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   mariadb:
     image: mariadb:10
-    ports:
-      - "33306:3306"
-    container_name: mariadb
-    volumes:
-      - ./db/conf.d:/etc/mysql/conf.d
-      - ./db/data:/var/lib/mysql
-      - ./db/initdb.d:/docker-entrypoint-initdb.d
+    restart: unless-stopped
     environment:
       TZ: Asia/Seoul
-      MARIADB_USER: maria
-      MARIADB_PASSWORD: application
-      MARIADB_ROOT_PASSWORD: application
       MARIADB_DATABASE: DEMO
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      # 테이블 생성 스크립트만 (02-seed.sql의 테스트 계정은 운영에 넣지 않음)
+      - ./db/initdb.d/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/initdb.d/03-call-history.sql:/docker-entrypoint-initdb.d/03-call-history.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7.4.3
-    ports:
-      - "36379:6379"
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
-      - ./data/redis/:/data
-    command: ["redis-server", "--requirepass", "redis"]
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-networks:
-  default:
-    driver: bridge
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    # relay 포트 범위를 그대로 쓰기 위해 서버 네트워크를 직접 사용
+    network_mode: host
+    command:
+      - -n
+      - --listening-port=3478
+      - --external-ip=${PUBLIC_IP}/${PRIVATE_IP}
+      - --realm=${DOMAIN}
+      - --use-auth-secret
+      - --static-auth-secret=${RTC_TURN_SECRET}
+      - --min-port=49160
+      - --max-port=49200
+      - --fingerprint
+      - --no-tls
+      - --no-dtls
+      - --no-cli
+      - --no-multicast-peers
+      # 내부망으로 중계 금지 (TURN을 통해 서버 내부 서비스에 접근하는 것 방지)
+      - --denied-peer-ip=0.0.0.0-0.255.255.255
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=127.0.0.0-127.255.255.255
+      - --denied-peer-ip=169.254.0.0-169.254.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --log-file=stdout
+
+volumes:
+  mariadb-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
