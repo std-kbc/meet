@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 COMPOSE=(docker compose -f compose.prod.yaml)
 
 if [ $# -ne 2 ]; then
-  echo "사용법: $0 <username> <nickname>" >&2
+  echo "Usage: $0 <username> <nickname>" >&2
   exit 1
 fi
 USERNAME=$1
@@ -16,23 +16,23 @@ NICKNAME=$2
 
 # 입력값이 SQL에 들어가므로 허용 문자를 제한한다
 if [[ ! $USERNAME =~ ^[A-Za-z0-9_]{3,50}$ ]]; then
-  echo "username은 영문·숫자·_ 3~50자여야 합니다" >&2
+  echo "username must be 3-50 characters: letters, digits, or _" >&2
   exit 1
 fi
 if [[ $NICKNAME == *"'"* || $NICKNAME == *\\* || ${#NICKNAME} -gt 50 ]]; then
-  echo "nickname은 50자 이하이고 ' 와 \\ 를 쓸 수 없습니다" >&2
+  echo "nickname must be at most 50 characters and cannot contain ' or \\" >&2
   exit 1
 fi
 
 # 비밀번호는 화면에 표시하지 않고 두 번 입력받는다
-read -rsp "비밀번호: " PASSWORD; echo
-read -rsp "비밀번호 확인: " PASSWORD_CONFIRM; echo
+read -rsp "Password: " PASSWORD; echo
+read -rsp "Confirm password: " PASSWORD_CONFIRM; echo
 if [ "$PASSWORD" != "$PASSWORD_CONFIRM" ]; then
-  echo "비밀번호가 일치하지 않습니다" >&2
+  echo "Passwords do not match" >&2
   exit 1
 fi
 if [ ${#PASSWORD} -lt 8 ]; then
-  echo "비밀번호는 8자 이상이어야 합니다" >&2
+  echo "Password must be at least 8 characters" >&2
   exit 1
 fi
 
@@ -40,7 +40,7 @@ fi
 HASH=$(printf '%s\n' "$PASSWORD" \
   | "${COMPOSE[@]}" exec -T caddy caddy hash-password --algorithm bcrypt --bcrypt-cost 10)
 if [[ ! $HASH =~ ^\$2a\$10\$.{53}$ ]]; then
-  echo "비밀번호 해시 생성에 실패했습니다: $HASH" >&2
+  echo "Failed to hash password: $HASH" >&2
   exit 1
 fi
 
@@ -49,4 +49,4 @@ fi
 INSERT INTO users (username, password_hash, nickname) VALUES ('$USERNAME', '$HASH', '$NICKNAME');
 SQL
 
-echo "생성 완료: $USERNAME ($NICKNAME)"
+echo "Created user: $USERNAME ($NICKNAME)"
